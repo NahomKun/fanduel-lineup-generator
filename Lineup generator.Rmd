@@ -121,5 +121,5 @@ top_teams <- function(projection, num_top, cap, constraint, league, setplayers =
 }
 
 ## Generate the top n teams with no constraints
-Top50 <- top_teams(projection, 50, 60000, constraint = "none", league = "FanDuel")
+Topn <- top_teams(projection, n, 60000, constraint = "none", league = "FanDuel")
 ```
