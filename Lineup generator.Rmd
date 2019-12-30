@@ -1,6 +1,6 @@
 ---
 title: "NBA"
-author: "Nahom Taye"
+author: "Olio"
 date: "11/2/2019"
 output: html_document
 ---
@@ -93,6 +93,8 @@ Max <- find_teams(projection, 60000, constraint = "none", league = "FanDuel", se
 ```
 
 ```{r}
+#####does not work yet#####
+#select player to insert player manually
 setplayers <- subset(projection, (Id == 6))
 test4 <- find_teams(projection, 60000, constraint = "none", league = "FanDuel", setplayers = setplayers, removeteams = NULL)
 ```
