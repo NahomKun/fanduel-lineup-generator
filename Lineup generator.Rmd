@@ -1,0 +1,123 @@
+---
+title: "NBA"
+author: "Nahom Taye"
+date: "11/2/2019"
+output: html_document
+---
+```{r}
+# Use lpSolveAPI
+library(lpSolve)
+library(lpSolveAPI)
+library(tidyverse)
+```
+
+
+
+```{r}
+find_teams <- function(projection, cap, constraint = c("none", "all_diff", "no_opp"), 
+                       league = c("FanDuel"), setplayers = NULL, removeteams = NULL) 
+  {
+  colnames(projection) <- c("Id", "Position", "Player", "Salary", "Points" )
+  
+  PG <- ifelse(projection$Position == "PG", 1, 0)
+  SG <- ifelse(projection$Position == "SG", 1, 0)
+  SF <- ifelse(projection$Position == "SF", 1, 0)
+  PF <- ifelse(projection$Position == "PF", 1, 0)
+  C <- ifelse(projection$Position == "C", 1, 0)
+  
+  lpfantasy <- make.lp(0, nrow(projection))
+  
+  ## Set objective function with the expected number of points
+  set.objfn(lpfantasy, projection$Points)
+  
+  ## Make sure the decision variables are binary
+  set.type(lpfantasy, seq(1, nrow(projection), by=1), type = c("binary"))
+  
+  if(league == "FanDuel")
+    {
+    add.constraint(lpfantasy, PG, "=", 2)
+    add.constraint(lpfantasy, SG, "=", 2)
+    add.constraint(lpfantasy, SF, "=", 2)
+    add.constraint(lpfantasy, PF, "=", 2)
+    add.constraint(lpfantasy, C, "=", 1)
+  }
+  
+  add.constraint(lpfantasy, projection$Salary, "<=", cap)
+
+  ## Set objective direction
+  lp.control(lpfantasy, sense='max')
+  
+  if(!is.null(setplayers)) 
+    {
+    if(league == "FanDuel")
+      {
+      if((sum(setplayers$Position == "PG") > 2) || (sum(setplayers$Position == "SG") > 2) || (sum(setplayers$Position == "SF") > 2) ||
+          (sum(setplayers$Position == "PF") > 2) || (sum(setplayers$Position == "C") > 1))
+        stop("One of your positions has too many players")
+      }
+    }
+if(!is.null(removeteams)) {
+    if(nrow(removeteams) != nrow(projection))
+      stop("Your team restrictions do not match the number of players included in the 'Projection' file")
+    for(m in 1:ncol(removeteams)) 
+      {
+      add.constraint(lpfantasy, removeteams[, m], "<=", 8)
+    }
+}
+   team <- data.frame(matrix(0, 1, ncol(projection) + 2))
+  colnames(team) <- c(colnames(projection), "TeamSalary", "TotalPoints")
+
+  ## Solve the model, if this returns 0 an optimal solution is found
+  solve(lpfantasy)
+  if(solve(lpfantasy) != 0)
+    stop("Optimization failed at some step")
+  
+  ## Get the players on the team
+  team_select <- subset(data.frame(projection, get.variables(lpfantasy)), get.variables.lpfantasy. == 1)
+  team_select$get.variables.lpfantasy. <- NULL
+  team_select$TeamSalary <- sum(team_select$Salary)
+  team_select$TotalPoints <- sum(team_select$Points)
+  team <- rbind(team, team_select)
+  team <- team[-1,]
+  rownames(team) <- NULL
+  team
+}
+```
+
+ 
+```{r}
+projection <- read.csv("Projections - Projection.csv", header = T)
+
+## Returns the top ten teams with no constraints, subject to the max salary cap of 60,000
+Max <- find_teams(projection, 60000, constraint = "none", league = "FanDuel", setplayers = NULL, removeteams = NULL)
+```
+
+```{r}
+setplayers <- subset(projection, (Id == 6))
+test4 <- find_teams(projection, 60000, constraint = "none", league = "FanDuel", setplayers = setplayers, removeteams = NULL)
+```
+
+``` {r}
+top_teams <- function(projection, num_top, cap, constraint, league, setplayers = NULL) {
+  result <- find_teams(projection, cap, constraint = constraint, league = league, setplayers = setplayers)
+  restrict <- as.matrix(rep(0, nrow(projection)))
+  restrict[match(result$Id, projection$Id), 1] <- 1
+  j <- 1
+  
+  while(j < num_top) {
+    resultnew <- find_teams(projection, cap, constraint = constraint, league = league, setplayers = setplayers, removeteams = restrict)
+    restrict <- cbind(restrict, rep(0, nrow(restrict)))
+    restrict[match(resultnew$Id, projection$Id), j] <- 1
+    result <- rbind(result, resultnew)
+    j <- j + 1
+  }
+  
+  TeamNumber <- rep(1:num_top, each = 9)
+  result <- cbind.data.frame(result, TeamNumber)
+  arrange(result, desc(TeamNumber))
+  result
+}
+
+## Generate the top 10 teams with no constraints
+Top50 <- top_teams(projection, 50, 60000, constraint = "none", league = "FanDuel")
+```
