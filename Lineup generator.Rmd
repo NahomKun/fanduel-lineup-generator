@@ -123,3 +123,45 @@ top_teams <- function(projection, num_top, cap, constraint, league, setplayers =
 ## Generate the top n teams with no constraints
 Topn <- top_teams(projection, n, 60000, constraint = "none", league = "FanDuel")
 ```
+
+###Monte Carlo Simulation
+
+```{r}
+# str(Top50)
+
+sim <- 60000
+
+N <- 2000
+
+means <- rep(NA, sim)
+
+ for (i  in 1:sim) 
+   {
+ d <- sample (Top50$TotalPoints, N)
+ means[i] <- mean(d)
+  }
+ 
+hist(d)
+mean(d)
+sd(d)
+#summary(d)
+# density(d)
+# dnorm(Top50, mean = 359.9, sd = 1)
+```
+```{r}
+library(rstan)
+
+model <- stan_model('Stan_Model.stan')
+options(mc.cores = 4)
+fit <- sampling(model, list(N=N, d=d), iter= 2000, chains = 4)
+#diagnose
+print(fit)
+
+#graph
+params <- extract(fit)
+#graph mean
+#hist(params$mu)
+library(shinystan)
+launch_shinystan(fit)
+```
+
