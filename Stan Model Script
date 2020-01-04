@@ -1,0 +1,15 @@
+data {
+  int N;
+  real d[N];
+
+}
+
+parameters {
+ real mu;
+ real < lower=0> sigma;
+}
+
+model {
+  for(i in 1:N)
+   d[i] ~ normal(359.8635,1.567606);
+}
