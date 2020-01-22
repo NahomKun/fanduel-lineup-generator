@@ -158,7 +158,7 @@ Topn <- top_teams(projection, n, 60000, constraint = "none", league = "FanDuel")
 #print(fit)
 
 #graph
-params <- extract(fit)
+#params <- extract(fit)
 #graph mean
 #hist(params$mu)
 #library(shinystan)
